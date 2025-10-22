@@ -9,9 +9,6 @@ from torch_geometric.nn import Node2Vec
 
 
 def parse_args():
-    """
-    解析命令行参数
-    """
     parser = argparse.ArgumentParser(
         description="Train Node2Vec embeddings using PyTorch Geometric"
     )
