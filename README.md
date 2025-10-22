@@ -41,7 +41,6 @@ result_all <- run_network_pipeline(
 
 2️⃣ Node Embedding with Node2Vec (Python)
 
-```bash
 # 进入数据导出目录
 cd ./data/data_export/
 
@@ -58,9 +57,8 @@ python run_node2vec.py \
   --lr 0.01 \
   --epochs 200
 
-### 3️⃣ Training Graph Attention + DGI (Python)
+3️⃣ Training Graph Attention + DGI (Python)
 
-```bash
 python train_gatv_2_dgi_multi.py \
   --edge-pairs-true ./index_pairs_true.txt \
   --edge-feats-true ./edge_feature_true.txt \
@@ -75,9 +73,8 @@ python train_gatv_2_dgi_multi.py \
   --dgi-scale 0.1
 
 
-### 4️⃣ Extract and Merge Attention Scores (Python)
+ 4️⃣ Extract and Merge Attention Scores (Python)
 
-```bash
 python combine_attention_scores.py \
   --epoch 1000 \
   --root-dir ./experiments/multi_run \
