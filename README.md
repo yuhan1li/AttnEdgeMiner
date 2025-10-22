@@ -27,9 +27,26 @@ The workflow consists of four main steps: **network construction**, **node embed
 
 ---
 
+## 🔹 Example Data for Demonstration
+
+To run the full workflow, we provide **two example datasets** for download. These datasets allow you to construct the Seurat object and the network object for analysis:
+
+1. **Seurat object (`seurat_obj = iAT2_data`)**  
+   - This is a Seurat V4 object containing processed single-cell data.  
+   - Download link: [iAT2_data.rds](#)  
+
+2. **scDNS output object (`iAT2_scDNSob`)**  
+   - This object contains the network computed using scDNS for the same dataset, including MI and DREMI values.  
+   - Download link: [iAT2_scDNSob.rds](#)  
+
+> **Note:** Make sure to download both files before starting the analysis pipeline.
+
 ### 1️⃣ Network Construction (R)
 
 ```r
+加载run_network_pipeline 函数
+source network_pipeline_function.R
+
 result_all <- run_network_pipeline(
   seurat_obj           = iAT2_data,
   group_col            = "WT_DSPKD",
