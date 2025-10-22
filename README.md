@@ -43,12 +43,12 @@ To run the full workflow, we provide **two example datasets** for download. Thes
 
 ### 1️⃣ Network Construction (R)
 
-run_network_pipeline constructs training data for graph-based models from single-cell RNA-seq data. It builds cell type–specific networks using prior knowledge (gene regulatory interactions, protein-protein interactions, and signaling pathways) and integrates highly expressed marker genes and housekeeping genes. The function generates positive edges (biologically relevant gene pairs within each cell type) and negative edges (gene pairs with zero expression or random pairs lacking prior evidence). For each edge, it provides node indices, edge features, and labels, producing a complete dataset ready for downstream network learning or GNN training. 最终生成的用于后续训练的文件保存在 output_dir 路径下面
+The run_network_pipeline function constructs training data for graph-based models from single-cell RNA-seq data. It builds cell type-specific networks by integrating multiple data sources including prior knowledge (gene regulatory interactions, protein-protein interactions, and signaling pathways), highly expressed marker genes, and housekeeping genes. The function generates both positive edges (biologically validated gene pairs within each cell type) and negative edges (gene pairs with zero expression or random pairs lacking prior biological evidence). For each edge, it provides comprehensive information including node indices, edge features, and labels, creating a complete dataset optimized for downstream network learning or graph neural network training. The final output files are saved in the specified output_dir directory.
 
 ```r
-加载run_network_pipeline 函数
-在当前路径下加载相关函数，需要
-source network_pipeline_function.R
+# Load the run_network_pipeline function
+# Source the required functions from the current directory
+source("network_pipeline_function.R")
 
 result_all <- run_network_pipeline(
   seurat_obj           = iAT2_data,
@@ -78,8 +78,9 @@ conda activate scDNS_python
 run_node2vec.py generates low-dimensional embeddings for genes in the prior knowledge network. Each gene (node) is mapped to a 512-dimensional vector that captures both its local neighborhood structure and global network topology. These embeddings can then be used as input features for downstream tasks such as graph neural network training or edge prediction.
 
 ```
-进入第一步的输出文件路径下面进行进一步的基因embedding的获取
-cd ./output_data/data_export/  并将所有的.py函数文件放在该文件夹下面， 方面下一步骤的执行
+# Navigate to the output directory from the previous step
+cd ./output_data/data_export/
+# Place all Python script files in this folder for the next step execution
 
 python run_node2vec.py \
   --input ./gene_map.txt \
@@ -93,11 +94,12 @@ python run_node2vec.py \
   --lr 0.01 \
   --epochs 200
 ```
-Please use the argument --help to see all available input parameters.
+Use the --help argument to see all available input parameters and their descriptions.
 
 ### 3️⃣ Training Graph Attention + DGI (Python)
 
-We use the train_gatv_2_dgi_multi.py script for further analysis. In this step, the gene regulatory network is trained using a GATv2 graph attention network combined with Deep Graph Infomax (DGI). The script takes the node embeddings and edge feature files generated in the previous steps to perform edge classification, predicting potential regulatory relationships between gene pairs. The graph attention mechanism aggregates information from each node and its neighbors, while the self-supervised DGI module ensures the embeddings capture the overall network structure. Supervised edge classification is optimized with positive and negative edge labels, using Focal Loss to handle class imbalance. The outputs, including attention scores for each edge and updated node embeddings, are saved in ./experiments/multi_run/ for downstream network analysis and visualization.
+The train_gatv_2_dgi_multi.py script implements a sophisticated graph learning approach that combines GATv2 graph attention networks with Deep Graph Infomax (DGI). This integrated framework takes node embeddings and edge features generated in previous steps to perform edge classification, predicting potential regulatory relationships between gene pairs. The graph attention mechanism dynamically aggregates information from each node and its neighbors, while the self-supervised DGI module ensures the learned embeddings effectively capture the overall network structure. Supervised edge classification is optimized using positive and negative edge labels, with Focal Loss employed to handle class imbalance. The training outputs, including attention scores for each edge and refined node embeddings, are systematically saved in ./experiments/multi_run/ for subsequent network analysis and visualization.
+
 
 ```
 python train_gatv_2_dgi_multi.py \
@@ -113,10 +115,10 @@ python train_gatv_2_dgi_multi.py \
   --runs 10 \
   --dgi-scale 0.1
 ```
-Please use the argument --help to see all available input parameters.
+Use the --help argument to see all available input parameters and their descriptions.
 ### 4️⃣ Extract and Merge Attention Scores (Python)
 
-In the final step, combine_attention_scores.py aggregates attention scores from multiple GATv2+DGI runs, integrates cell-type information, and computes per-edge rankings. It generates a detailed per-edge score file (edge_scores_detailed.csv) and a confidence summary file (edge_scores_confidence.csv) for downstream analysis.
+The combine_attention_scores.py script aggregates attention scores from multiple runs, integrates cell-type specific information, and computes comprehensive per-edge ranking metrics. It generates two key output files: a detailed per-edge score file (edge_scores_detailed.csv) containing raw attention scores from all runs, and a confidence summary file (edge_scores_confidence.csv) that provides consolidated rankings and confidence assessments for downstream biological interpretation.
 
 ```
 python combine_attention_scores.py \
@@ -131,7 +133,7 @@ python combine_attention_scores.py \
 
 After completing the GATv2+DGI training and merging multiple runs, the final output files provide a comprehensive view of predicted gene-gene regulatory interactions.
 
-- **Detailed per-edge scores (`edge_scores_detailed.csv`)**  
+- **Detailed per-edge scores (`edge_scores_confidence.csv`)**  
   This file contains per-edge attention scores from all training runs, along with computed ranking metrics within each cell type. Each row represents a gene pair (edge), and columns include:
   - `edge`: the gene pair, e.g., `AAAS_AGO2`
   - `KO_0` … `WT_6`: attention scores from different experimental conditions or replicates
@@ -146,8 +148,6 @@ Example rows:
 | AAAS_AGO2  | 123712 | 122726 | ... | 133692 | 117660 | 137408     | High_confidence |
 | A1BG_AKT1  | 188970 | 189072 | ... | 198424 | 187237 | 195399     | Low_confidence  |
 
-- **Confidence summary file (`edge_scores_confidence.csv`)**  
-  Provides a wide-format summary of edges with their confidence level, useful for downstream network analysis and visualization.
 
 
 
