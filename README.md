@@ -39,7 +39,7 @@ result_all <- run_network_pipeline(
   negative_sample_size = 50000
 )
 
-### 2️⃣ Node Embedding with Node2Vec (Python)
+2️⃣ Node Embedding with Node2Vec (Python)
 
 ```bash
 # 进入数据导出目录
