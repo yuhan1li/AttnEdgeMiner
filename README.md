@@ -6,12 +6,18 @@
 
 ## 📦 Requirements
 
-- **R ≥ 4.2**  
-- **Python ≥ 3.8**  
-- **R packages**: `Seurat`, `dplyr`, `tidyverse`  
-- **Python packages**: `torch`, `torch_geometric`, `node2vec`, `numpy`, `pandas`  
+### R Environment
 
-> 💡 Tip: Use a Conda environment to simplify installation of Python dependencies.
+- **R version ≥ 4.2**  
+  - Recommended: **R 4.2.3** or later  
+- **Required R packages**:  
+  - `Seurat (v4)` – single-cell analysis  
+  - `dplyr` – data manipulation  
+  - `tidyverse` – collection of data science packages  
+  - `Matrix` – sparse matrix operations  
+  - `purrr` – functional programming  
+  - `COSG` – marker gene identification  
+  - `GSEABase` – handling gene sets (for housekeeping genes)
 
 ---
 
