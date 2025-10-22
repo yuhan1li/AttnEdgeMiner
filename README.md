@@ -115,15 +115,39 @@ python train_gatv_2_dgi_multi.py \
 ```
 Please use the argument --help to see all available input parameters.
 ### 4️⃣ Extract and Merge Attention Scores (Python)
+
+In the final step, combine_attention_scores.py aggregates attention scores from multiple GATv2+DGI runs, integrates cell-type information, and computes per-edge rankings. It generates a detailed per-edge score file (edge_scores_detailed.csv) and a confidence summary file (edge_scores_confidence.csv) for downstream analysis.
+
 ```
 python combine_attention_scores.py \
   --epoch 1000 \
   --root-dir ./experiments/multi_run \
   --celltype-file ./symbol_pair.txt \
-  --output ./attention_layer1_epoch1000_combined_rank.csv \
-  --output-wide ./attention_layer1_epoch1000_wide_confidence.csv
+  --output ./edge_scores_detailed.csv \
+  --output-wide ./edge_scores_confidence.csv
 ```
 
+### Final Attention Score Files
+
+After completing the GATv2+DGI training and merging multiple runs, the final output files provide a comprehensive view of predicted gene-gene regulatory interactions.
+
+- **Detailed per-edge scores (`edge_scores_detailed.csv`)**  
+  This file contains per-edge attention scores from all training runs, along with computed ranking metrics within each cell type. Each row represents a gene pair (edge), and columns include:
+  - `edge`: the gene pair, e.g., `AAAS_AGO2`
+  - `KO_0` … `WT_6`: attention scores from different experimental conditions or replicates
+  - `rank`: minimum rank across conditions
+  - `final_rank`: overall rank across all cell types
+  - `confidence`: high- or low-confidence classification based on cross-cell-type consistency
+
+Example rows:
+
+| edge       | KO_0   | KO_1   | ... | WT_6   | rank   | final_rank | confidence      |
+|------------|--------|--------|-----|--------|--------|------------|----------------|
+| AAAS_AGO2  | 123712 | 122726 | ... | 133692 | 117660 | 137408     | High_confidence |
+| A1BG_AKT1  | 188970 | 189072 | ... | 198424 | 187237 | 195399     | Low_confidence  |
+
+- **Confidence summary file (`edge_scores_confidence.csv`)**  
+  Provides a wide-format summary of edges with their confidence level, useful for downstream network analysis and visualization.
 
 
 
