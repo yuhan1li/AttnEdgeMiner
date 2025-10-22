@@ -40,11 +40,8 @@ result_all <- run_network_pipeline(
 )
 
 2️⃣ Node Embedding with Node2Vec (Python)
-
-# 进入数据导出目录
 cd ./data/data_export/
 
-# 运行 Node2Vec 生成节点嵌入
 python run_node2vec.py \
   --input ./gene_map.txt \
   --output ./gene_embedding.txt \
@@ -58,7 +55,6 @@ python run_node2vec.py \
   --epochs 200
 
 3️⃣ Training Graph Attention + DGI (Python)
-
 python train_gatv_2_dgi_multi.py \
   --edge-pairs-true ./index_pairs_true.txt \
   --edge-feats-true ./edge_feature_true.txt \
@@ -72,16 +68,13 @@ python train_gatv_2_dgi_multi.py \
   --runs 10 \
   --dgi-scale 0.1
 
-
- 4️⃣ Extract and Merge Attention Scores (Python)
-
+4️⃣ Extract and Merge Attention Scores (Python)
 python combine_attention_scores.py \
   --epoch 1000 \
   --root-dir ./experiments/multi_run \
   --celltype-file ./symbol_pair.txt \
   --output ./attention_layer1_epoch1000_combined_rank.csv \
   --output-wide ./attention_layer1_epoch1000_wide_confidence.csv
-
 
 
 
