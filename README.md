@@ -33,3 +33,45 @@ result_all <- run_network_pipeline(
   negative_sample_size = 50000
 )
 
+## 🔹 Step 2: Node Embedding with Node2Vec
+
+cd ./data/data_export/
+
+python run_node2vec.py \
+  --input ./gene_map.txt \
+  --output ./gene_embedding.txt \
+  --embedding_dim 512 \
+  --walk_length 20 \
+  --context_size 10 \
+  --walks_per_node 10 \
+  --p 0.5 \
+  --q 1.0 \
+  --lr 0.01 \
+  --epochs 200
+
+## 🔹 Step 3: Training Graph Attention + DGI
+
+python train_gatv_2_dgi_multi.py \
+  --edge-pairs-true ./index_pairs_true.txt \
+  --edge-feats-true ./edge_feature_true.txt \
+  --edge-pairs ./index_pairs_all.txt \
+  --edge-feats ./edge_feature_all.txt \
+  --node-emb ./gene_embedding.txt \
+  --pos-edges ./Positive_edge.txt \
+  --neg-edges ./Negative_edge.txt \
+  --outdir ./experiments/multi_run \
+  --epochs 1000 \
+  --runs 10 \
+  --dgi-scale 0.1
+
+## 🔹 Step 4: Extract and Merge Attention Scores
+
+python combine_attention_scores.py \
+  --epoch 1000 \
+  --root-dir ./experiments/multi_run \
+  --celltype-file ./symbol_pair.txt \
+  --output ./attention_layer1_epoch1000_combined_rank.csv \
+  --output-wide ./attention_layer1_epoch1000_wide_confidence.csv
+
+
+
