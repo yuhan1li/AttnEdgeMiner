@@ -56,7 +56,7 @@ def main() -> None:
     if not root_dir.is_dir():
         sys.exit(f"[ERROR] Root directory not found: {root_dir}")
 
-    # === 1️加载多个 run 的注意力得分 ===
+    # === 1️ Load attention scores from multiple runs ===
     run_names = [f"run_{i:02d}" for i in range(1, args.n_runs + 1)]
     dfs = []
     for run in run_names:
@@ -67,19 +67,19 @@ def main() -> None:
 
     df_all = pd.concat(dfs, axis=1)
 
-    # === 2️ 加载 celltype 注释文件 ===
+    # === 2️ Load cell type annotation file ===
     celltype_path = Path(args.celltype_file).expanduser().resolve()
     if not celltype_path.exists():
         sys.exit(f"[ERROR] Cell-type file not found: {celltype_path}")
     celltype_df = pd.read_csv(celltype_path, sep="\t", header=0)
 
-    # === 3️ 合并信息 ===
+    # === 3️ Merge attention scores and annotation data ===
     df = pd.concat([celltype_df, df_all], axis=1)
     score_cols = run_names
     n_runs = len(score_cols)
     group_key = "celltype_stim"
 
-    # === 4️各种组内排名指标 ===
+    # === 4️ Calculate in-group ranking metrics ===
     df["mean_score"] = df[score_cols].mean(axis=1, skipna=True)
     df["rank_mean_in_grp"] = df.groupby(group_key)["mean_score"].rank(method="min", ascending=False)
 
@@ -92,31 +92,31 @@ def main() -> None:
     df["geo_mean_score"] = geo_mean
     df["rank_gm_in_grp"] = df.groupby(group_key)["geo_mean_score"].rank(method="min", ascending=False)
 
-    # === 5️输出初步的合并文件 ===
+    # === 5️  Export the merged long-format file ===
     output_path = Path(args.output).expanduser().resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_path, index=False)
     print(f"[INFO] Combined table written to {output_path}")
 
-    # === 6️R 部分逻辑的 Python 实现：宽表 + rank consistency ===
+    # === 6️ final ranking result output ===
     print("[INFO] Computing per-edge cross-celltype rank consistency...")
 
     df_wide = df.pivot_table(index="edge", columns="celltype_stim", values="rank_rp_in_grp")
     df_wide = df_wide.reset_index()
 
-    # rowMins → 每行最小 rank
+    # rowMins → Minimum rank across each row (edge)
     df_wide["rank"] = df_wide.iloc[:, 1:].min(axis=1, skipna=True)
     df_wide["final_rank"] = df_wide["rank"].rank(method="min", ascending=True)
 
-    # 计算 80% 分位点阈值
+    # 80th percentile threshold
     threshold = df_wide["final_rank"].quantile(0.8)
 
-    # 新增置信度列
+    # Add confidence category
     df_wide["confidence"] = np.where(
         df_wide["final_rank"] <= threshold, "High_confidence", "Low_confidence"
     )
 
-    # 输出最终宽表
+    # Export final wide-format output
     output_wide_path = Path(args.output_wide).expanduser().resolve()
     output_wide_path.parent.mkdir(parents=True, exist_ok=True)
     df_wide.to_csv(output_wide_path, index=False)
