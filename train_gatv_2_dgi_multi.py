@@ -3,7 +3,7 @@
 """Train a two‑layer GATv2 encoder + DGI model for link‑prediction‑style
 attention mining **multiple times** and aggregate the results.
 
-Example (3 runs):
+Example (10 runs):
     python train_gatv_2_dgi_multi.py \
         --edge-pairs-true ./index_pairs_true.txt \
         --edge-feats-true ./edge_feature_true.txt \
@@ -89,7 +89,7 @@ class Encoder(nn.Module):
 
     def __init__(self, in_channels: int, hidden_channels: int, edge_dim: int, heads: int = 1):
         super().__init__()
-        self.edge_dim = edge_dim  # 自动识别后传入
+        self.edge_dim = edge_dim  # Automatically detected and passed in
 
         self.gat1 = GATv2Conv(
             in_channels,
@@ -114,7 +114,7 @@ class Encoder(nn.Module):
         self.dropout2 = nn.Dropout(0.3)
 
         self.prelu = nn.PReLU(hidden_channels)
-        self.attn1_raw: torch.Tensor | None = None  # 存储 raw attention logits
+        self.attn1_raw: torch.Tensor | None = None  # Store raw attention logits
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_attr: torch.Tensor | None = None):
         x, _, attn_raw = self.gat1(
@@ -287,7 +287,7 @@ def train_single_run(
     # Attention scores -----------------------------------------
     raw_attn = enc.attn1_raw.detach().cpu().squeeze(-1).numpy()
     attn = torch.sigmoid(enc.attn1_raw).detach().cpu().squeeze(-1).numpy()
-    # 保存未 sigmoid 的注意力分数
+    # Save attention scores without sigmoid
     pd.DataFrame({"attention": raw_attn}).to_csv(outdir / f"attention_layer1_epoch{epochs}_raw.csv", index=False)
     pd.DataFrame({"attention": attn}).to_csv(outdir / f"attention_layer1_epoch{epochs}.csv", index=False)
     
@@ -405,7 +405,7 @@ def parse_args():
 # -----------------------------------------------------------------------------
 
 def main():
-    start_time = time.time()   # 记录开始时间
+    start_time = time.time()   # Record start time
     
     args = parse_args()
     args.outdir.mkdir(parents=True, exist_ok=True)
@@ -433,7 +433,7 @@ def main():
     if args.runs > 1:
         aggregate_runs(args.outdir, args.runs, args.epochs)
         
-    # 程序结束时打印消耗
+    # Print elapsed time when program ends
     end_time = time.time()
     elapsed = end_time - start_time
     print(f"\n✅ Total training time: {elapsed/60:.2f} minutes ({elapsed:.1f} seconds)")
