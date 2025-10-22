@@ -39,6 +39,13 @@ result_all <- run_network_pipeline(
   negative_sample_size = 50000
 )
 
+
+##  创建python 环境
+conda env create -f environment.yml
+conda activate scDNS_python
+
+
+
 2️⃣ Node Embedding with Node2Vec (Python)
 cd ./data/data_export/
 
