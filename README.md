@@ -34,7 +34,7 @@ result_all <- run_network_pipeline(
 )
 
 ###  Step 2: Node Embedding with Node2Vec
-
+``` python
 cd ./data/data_export/
 
 python run_node2vec.py \
