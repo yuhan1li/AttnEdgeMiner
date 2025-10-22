@@ -1,6 +1,6 @@
-# AttnEdgeMiner
+# 🌟 AttnEdgeMiner
 
-**AttnEdgeMiner** is a semi-supervised graph neural network (GNN) framework that leverages attention mechanisms to identify stable, high-confidence regulatory edges in biological networks, providing interpretable insights into gene interactions and signaling pathways.
+**AttnEdgeMiner** is a **semi-supervised graph neural network (GNN) framework** that leverages **attention mechanisms** to identify **stable, high-confidence regulatory edges** in biological networks. It provides interpretable insights into gene interactions and signaling pathways.  
 
 ---
 
@@ -9,13 +9,19 @@
 - **R ≥ 4.2**  
 - **Python ≥ 3.8**  
 - **R packages**: `Seurat`, `dplyr`, `tidyverse`  
-- **Python packages**: `torch`, `torch_geometric`, `node2vec`, `numpy`, `pandas`
+- **Python packages**: `torch`, `torch_geometric`, `node2vec`, `numpy`, `pandas`  
+
+> 💡 Tip: Use a Conda environment to simplify installation of Python dependencies.
 
 ---
 
 ## 🔹 Analysis Workflow
 
-### Step 1: Run Network Construction (R)
+The workflow consists of four main steps: **network construction**, **node embedding**, **GNN training**, and **attention score extraction**.
+
+---
+
+### 1️⃣ Network Construction (R)
 
 ```r
 result_all <- run_network_pipeline(
@@ -33,10 +39,13 @@ result_all <- run_network_pipeline(
   negative_sample_size = 50000
 )
 
-###  Step 2: Node Embedding with Node2Vec
-``` python
+### 2️⃣ Node Embedding with Node2Vec (Python)
+
+```bash
+# 进入数据导出目录
 cd ./data/data_export/
 
+# 运行 Node2Vec 生成节点嵌入
 python run_node2vec.py \
   --input ./gene_map.txt \
   --output ./gene_embedding.txt \
@@ -49,8 +58,9 @@ python run_node2vec.py \
   --lr 0.01 \
   --epochs 200
 
-### Step 3: Training Graph Attention + DGI
+### 3️⃣ Training Graph Attention + DGI (Python)
 
+```bash
 python train_gatv_2_dgi_multi.py \
   --edge-pairs-true ./index_pairs_true.txt \
   --edge-feats-true ./edge_feature_true.txt \
@@ -64,14 +74,19 @@ python train_gatv_2_dgi_multi.py \
   --runs 10 \
   --dgi-scale 0.1
 
-### Step 4: Extract and Merge Attention Scores
 
+### 4️⃣ Extract and Merge Attention Scores (Python)
+
+```bash
 python combine_attention_scores.py \
   --epoch 1000 \
   --root-dir ./experiments/multi_run \
   --celltype-file ./symbol_pair.txt \
   --output ./attention_layer1_epoch1000_combined_rank.csv \
   --output-wide ./attention_layer1_epoch1000_wide_confidence.csv
+
+
+
 
 
 
