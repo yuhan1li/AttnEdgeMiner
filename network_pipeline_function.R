@@ -1,11 +1,11 @@
 build_network_by_group_generalized <- function(
     seurat_obj,
-    group_col,          # 元数据中的分组列名，如 "WT_DSPKD"
-    group_value,        # 分组值，如 "WT" 或 "KO"
-    network_obj,        # Network 对象 (包含 Symbol.1, Symbol.2, MI_WT / MI_KO 等)
-    random_network_obj, # random Network 对象 (包含 source,target,MI_WT / MI_KO 等)
-    housekeeping_gmt,   # housekeeping 基因文件路径
-    cluster_col = NULL, # 若已有聚类列名，可指定
+    group_col,          # Metadata column name for grouping, e.g., "WT_DSPKD"
+    group_value,        # Group value, e.g., "WT" or "KO"
+    network_obj,        # Network object (contains Symbol.1, Symbol.2, MI_WT / MI_KO etc.)
+    random_network_obj, # Random network object (contains source,target,MI_WT / MI_KO etc.)
+    housekeeping_gmt,   # Path to housekeeping genes file
+    cluster_col = NULL, # If clustering column exists, can specify
     run_clustering = TRUE,
     resolution = 0.5,
     dims = 1:20,
@@ -21,7 +21,7 @@ build_network_by_group_generalized <- function(
   library(GSEABase)
   
   #----------------------------------------
-  message(">>> Step 1: Subset Seurat object and preprocess")
+  message(">>> Step 1.1: Subset Seurat object and preprocess")
   seurat_sub <- subset(seurat_obj, cells = rownames(seurat_obj@meta.data[seurat_obj@meta.data[[group_col]] %in% group_value, ]))
   
   if (run_clustering) {
@@ -36,22 +36,22 @@ build_network_by_group_generalized <- function(
   } else if (!is.null(cluster_col)) {
     seurat_sub$clusters <- seurat_sub@meta.data[[cluster_col]]
   } else {
-    stop("请提供 cluster_col 或设置 run_clustering=TRUE")
+    stop("Please provide cluster_col or set run_clustering=TRUE")
   }
   
   #----------------------------------------
-  message(">>> Step 2: Prepare network column mapping")
-  suffix <- toupper(group_value) # 自动识别 WT / KO
+  message(">>> Step 1.2: Prepare network column mapping")
+  suffix <- toupper(group_value) # Automatically identify WT / KO
   mi_col <- paste0("MI_", suffix)
   d1_col <- paste0("DREMI_1_", suffix)
   d2_col <- paste0("DREMI_2_", suffix)
   
   if (!all(c(mi_col, d1_col, d2_col) %in% colnames(network_obj))) {
-    stop(paste0("Error: 无法在 network_obj 中找到列 ", mi_col, ", ", d1_col, ", ", d2_col))
+    stop(paste0("Error: Cannot find columns ", mi_col, ", ", d1_col, ", ", d2_col, " in network_obj"))
   }
   
   #----------------------------------------
-  message(">>> Step 3: Build main network")
+  message(">>> Step 1.3: Build main network")
   Network_x <- network_obj %>%
     dplyr::select(Symbol.1, Symbol.2, 
                   !!sym(mi_col), !!sym(d1_col), !!sym(d2_col)) %>%
@@ -65,7 +65,7 @@ build_network_by_group_generalized <- function(
   
   
   #----------------------------------------
-  message(">>> Step 4: Build random network")
+  message(">>> Step 1.4: Build random network")
   random_Network <- random_network_obj %>%
     dplyr::select(source, target, 
                   !!sym(mi_col), !!sym(d1_col), !!sym(d2_col)) %>%
@@ -87,7 +87,7 @@ build_network_by_group_generalized <- function(
   Network_x <- rbind(Network_x, random_clean)
   
   #----------------------------------------
-  # message(">>> Step 5: Sigmoid transform")
+  # message(">>> Step 1.5: Sigmoid transform")
   # sigmold_x <- function(x, mu, k) 1 / (1 + exp(-k * (x - mu)))
   # a1 <- median(log(Network_x$MI), na.rm = TRUE)
   # Network_x$sigmold_MI <- sigmold_x(log(Network_x$MI), mu = a1, k = 0.8)
@@ -108,13 +108,13 @@ build_network_by_group_generalized <- function(
   
   save(Network_x, file = file.path(save_prefix, paste0("Network_", group_value, ".Rdata")))
   #----------------------------------------
-  message(">>> Step 6: Identify COSG markers")
+  message(">>> Step 1.6: Identify COSG markers")
   Idents(seurat_sub) <- seurat_sub$clusters
   COSG_markers <- cosg(seurat_sub, groups = 'all', assay = 'RNA', slot = 'data', mu = 1, n_genes_user = top_n_marker)
   celltype_marker <- COSG_markers[["names"]]
   
   #----------------------------------------
-  message(">>> Step 7: Integrate housekeeping genes")
+  message(">>> Step 1.7: Integrate housekeeping genes")
   gene_sets <- getGmt(housekeeping_gmt)
   House_keep_gene <- geneIds(gene_sets[[1]])
   cell_types <- colnames(celltype_marker)
@@ -138,7 +138,7 @@ build_network_by_group_generalized <- function(
   }
   
   #----------------------------------------
-  message(">>> Step 8: Build subnetwork per cell type")
+  message(">>> Step 1.8: Build subnetwork per cell type")
   network_sub_list <- vector("list", length(positive_marker_list))
   names(network_sub_list) <- names(positive_marker_list)
   for (i in seq_along(positive_marker_list)) {
@@ -153,7 +153,7 @@ build_network_by_group_generalized <- function(
   
   save(Positive_Network_all, file = file.path(save_prefix, paste0("Positive_Network_all_", group_value, ".Rdata")))
   #----------------------------------------
-  message(">>> Step 9: Compute mean expression per cell type")
+  message(">>> Step 1.9: Compute mean expression per cell type")
   network_list <- vector("list", length(cell_types))
   names(network_list) <- gsub("[ +]", "_", cell_types)
   for (ct in cell_types) {
@@ -176,7 +176,7 @@ build_network_by_group_generalized <- function(
   network_all_celltype <- cbind(network_all_celltype, one_hot)
   
   #----------------------------------------
-  message(">>> Step 10: Save and return results")
+  message(">>> Step 1.10: Save and return results")
   save(network_all_celltype, file = file.path(save_prefix, paste0("network_all_celltype_", group_value, ".Rdata")))
   
   return(list(
@@ -216,7 +216,7 @@ run_network_pipeline <- function(
   results_list <- list()
   
   # ==========================================================
-  # 🧩 Step 1: 构建单个 group 网络
+  # 🧩 Step 1: Build individual group networks
   # ==========================================================
   for (grp in group_values) {
     message(">>> Running group: ", grp)
@@ -224,7 +224,7 @@ run_network_pipeline <- function(
     save_prefix <- file.path(output_dir, grp)
     dir.create(save_prefix, recursive = TRUE, showWarnings = FALSE)
     
-    #⚙️ 屏蔽该步骤内部的 warning
+    #⚙️ Suppress warnings for this step
     result <- suppressWarnings({
       build_network_by_group_generalized(
         seurat_obj = seurat_obj,
@@ -242,20 +242,20 @@ run_network_pipeline <- function(
       )
     })
     
-    # 保存单个组的结果
+    # Save individual group results
     saveRDS(result, file = file.path(save_prefix, paste0(grp, "_network_result.rds")))
     results_list[[grp]] <- result
   }
   
-  # 保存所有组结果
+  # Save all group results
   saveRDS(results_list, file = file.path(output_dir, "all_groups_network_results.rds"))
   
   # ==========================================================
-  # 🧩 Step 2–5：合并 + 生成训练数据
+  # 🧩 Step 2–5：Merge + Generate training data
   # ==========================================================
   suppressWarnings({
     # ------------------------------
-    # Step 2: 合并 WT/KO 网络
+    # Step 2: Merge WT/KO networks
     # ------------------------------
     message(">>> Step 2: Merge WT/KO networks")
     
@@ -274,7 +274,7 @@ run_network_pipeline <- function(
     )
     
     # ------------------------------
-    # Step 3: 基因编号映射
+    # Step 3: Gene index mapping
     # ------------------------------
     message(">>> Step 3: Assign gene indices")
     
@@ -285,7 +285,7 @@ run_network_pipeline <- function(
     gene_map$index <- seq_len(nrow(gene_map)) - 1
     colnames(gene_map) <- c("gene", "index")
     
-    # 创建导出目录
+    # Create export directory
     export_dir <- file.path(output_dir, "data_export")
     dir.create(export_dir, showWarnings = FALSE)
     
@@ -293,14 +293,14 @@ run_network_pipeline <- function(
     orignal_network$index1 <- gene_map$index[match(orignal_network$Symbol.1, gene_map$gene)]
     orignal_network$index2 <- gene_map$index[match(orignal_network$Symbol.2, gene_map$gene)]
     
-    # 💾 保存 gene_map
+    # 💾 Save gene_map
     write.table(
       orignal_network[, c("index1", "index2")],
       file = file.path(export_dir, "gene_map.txt"),
       sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE
     )
     
-    # 添加索引信息
+    # Add index information
     network_all_celltype$index1 <- gene_map$index[match(network_all_celltype$Symbol.1, gene_map$gene)]
     network_all_celltype$index2 <- gene_map$index[match(network_all_celltype$Symbol.2, gene_map$gene)]
     network_all_celltype$index  <- seq_len(nrow(network_all_celltype)) - 1
@@ -314,17 +314,17 @@ run_network_pipeline <- function(
     
     network_all_celltype$celltype_stim <- paste0(network_all_celltype$stim, "_", network_all_celltype$cluster)
     
-    # 确保 cluster 是因子（不是字符）
+    # Ensure cluster is factor (not character)
     network_all_celltype$celltype_stim <- factor(network_all_celltype$celltype_stim)
     
-    # 生成独热矩阵（去掉截距项）
+    # Generate one-hot matrix (remove intercept)
     one_hot <- model.matrix(~ celltype_stim - 1, data = network_all_celltype)
-    # 将 one-hot 编码拼接回原始数据框
+    # Bind one-hot encoding back to original dataframe
     network_all_celltype <- cbind(network_all_celltype, one_hot)
     
     # save(network_all_celltype, file = "./network_all_celltype.Rdata")
     # ------------------------------
-    # Step 4: 导出训练数据
+    # Step 4:  Export training data
     # ------------------------------
     message(">>> Step 4: Export training data")
     
@@ -369,7 +369,7 @@ run_network_pipeline <- function(
       sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE
     )
     
-    # 负样本：随机 + 无表达
+    # Negative samples: random + no expression
     network_all_celltype_random <- network_all_celltype[network_all_celltype$random == "random", ]
     network_all_celltype_true   <- network_all_celltype[network_all_celltype$random == "true", ]
     
@@ -382,19 +382,19 @@ run_network_pipeline <- function(
       Negative_network_all_celltype2
     )
     
-    # 随机采样负样本
+    # Random sampling of negative samples
     set.seed(123)
     Negative_network_all_celltype <- Negative_network_all_celltype %>%
       sample_n(min(negative_sample_size, nrow(network_all_celltype_random)))
     
-    # 保存负样本
+    # Save negative samples
     write.table(
       Negative_network_all_celltype[, c("index1", "index2", "index")],
       file = file.path(export_dir, "Negative_edge.txt"),
       sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE
     )
     
-    # 保存真实网络的 index 对
+    # Save true network index pairs
     write.table(
       network_all_celltype_true[, c("index1", "index2")],
       file = file.path(export_dir, "index_pairs_true.txt"),
