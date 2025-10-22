@@ -33,7 +33,7 @@ result_all <- run_network_pipeline(
   negative_sample_size = 50000
 )
 
-## 🔹 Step 2: Node Embedding with Node2Vec
+###  Step 2: Node Embedding with Node2Vec
 
 cd ./data/data_export/
 
@@ -49,7 +49,7 @@ python run_node2vec.py \
   --lr 0.01 \
   --epochs 200
 
-## 🔹 Step 3: Training Graph Attention + DGI
+### Step 3: Training Graph Attention + DGI
 
 python train_gatv_2_dgi_multi.py \
   --edge-pairs-true ./index_pairs_true.txt \
@@ -64,7 +64,7 @@ python train_gatv_2_dgi_multi.py \
   --runs 10 \
   --dgi-scale 0.1
 
-## 🔹 Step 4: Extract and Merge Attention Scores
+### Step 4: Extract and Merge Attention Scores
 
 python combine_attention_scores.py \
   --epoch 1000 \
