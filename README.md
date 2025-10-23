@@ -6,18 +6,20 @@
 
 ## 📦 Requirements
 
+
 ### R Environment
 
 - **R version ≥ 4.2**  
-  - Recommended: **R 4.2.3** or later  
-- **Required R packages**:  
-  - `Seurat (v4)` – single-cell analysis  
-  - `dplyr` – data manipulation  
-  - `tidyverse` – collection of data science packages  
-  - `Matrix` – sparse matrix operations  
-  - `purrr` – functional programming  
-  - `COSG` – marker gene identification  
-  - `GSEABase` – handling gene sets (for housekeeping genes)
+  - Recommended: **R 4.2.3** (used in this study)
+
+- **Required R packages and recommended versions**:  
+  - `Seurat (v4.3.0)` – single-cell analysis  
+  - `dplyr (v1.1.1)` – data manipulation  
+  - `tidyverse (v2.0.0)` – collection of data science packages  
+  - `Matrix (v1.5.3)` – sparse matrix operations  
+  - `purrr (v1.0.1)` – functional programming  
+  - `COSG (v0.9.0)` – marker gene identification  
+  - `GSEABase (v1.60.0)` – handling gene sets (for housekeeping genes)
 
 ---
 
