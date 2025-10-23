@@ -43,11 +43,7 @@ To run the full workflow, we provide **two example datasets** for download. Thes
 
 ### 1️⃣ Network Construction (R)
 
-The run_network_pipeline function constructs datasets for graph model training based on single-cell RNA sequencing data. By integrating multiple data sources—including prior knowledge such as gene regulatory interactions, protein-protein interactions, and signaling pathways—the function builds cell type-specific networks.
-
-The pipeline generates two types of edges: positive edges are derived from a candidate set integrating cell type-specific marker genes and housekeeping genes, extracted from prior knowledge networks to represent high-confidence biological associations; negative edges consist of gene pairs with zero co-expression and randomly generated pairs lacking known biological evidence, forming the negative sample set.
-
-For each edge, the function provides comprehensive information, including node indices, edge features, and labels, thereby constructing a standardized dataset suitable for downstream network learning or graph neural network training. All resulting files are saved in the user-specified output directory (output_dir).
+The run_network_pipeline function constructs cell type–specific graph datasets for downstream graph neural network (GNN) training based on single-cell RNA sequencing (scRNA-seq) data. By integrating multiple layers of prior biological knowledge—including gene regulatory interactions, protein–protein interactions, and signaling pathways—the function builds biologically meaningful cell type–specific networks. Within this pipeline, positive edges are generated from a candidate set that combines cell type–specific marker genes and housekeeping genes extracted from prior knowledge networks, representing high-confidence biological associations, whereas negative edges consist of gene pairs with zero co-expression and randomly generated pairs lacking known biological evidence, serving as the negative sample set. For each edge, the function outputs comprehensive information such as node indices, edge features, and labels, thereby generating a standardized dataset suitable for network learning and GNN-based analyses. All resulting files are saved in the user-specified output directory (output_dir).
 
 ```r
 # Load the run_network_pipeline function
@@ -102,7 +98,7 @@ python run_node2vec.py \
   --lr 0.01 \
   --epochs 200
 ```
-Use the --help argument to see all available input parameters and their descriptions.
+Use the python run_node2vec.py --help argument to see all available input parameters and their descriptions.
 
 ### 3️⃣ Training Graph Attention + DGI (Python)
 
@@ -123,7 +119,7 @@ python train_gatv_2_dgi_multi.py \
   --runs 10 \
   --dgi-scale 0.1
 ```
-Use the --help argument to see all available input parameters and their descriptions.
+Use the python train_gatv_2_dgi_multi.py --help argument to see all available input parameters and their descriptions.
 ### 4️⃣ Extract and Merge Attention Scores (Python)
 
 The combine_attention_scores.py script aggregates attention scores from multiple runs, integrates cell-type specific information, and computes comprehensive per-edge ranking metrics. It generates two key output files: a detailed per-edge score file (edge_scores_detailed.csv) containing raw attention scores from all runs, and a confidence summary file (edge_scores_confidence.csv) that provides consolidated rankings and confidence assessments for downstream biological interpretation.
