@@ -43,7 +43,11 @@ To run the full workflow, we provide **two example datasets** for download. Thes
 
 ### 1️⃣ Network Construction (R)
 
-The run_network_pipeline function constructs training data for graph-based models from single-cell RNA-seq data. It builds cell type-specific networks by integrating multiple data sources including prior knowledge (gene regulatory interactions, protein-protein interactions, and signaling pathways), highly expressed marker genes, and housekeeping genes. The function generates both positive edges (biologically validated gene pairs within each cell type) and negative edges (gene pairs with zero expression or random pairs lacking prior biological evidence). For each edge, it provides comprehensive information including node indices, edge features, and labels, creating a complete dataset optimized for downstream network learning or graph neural network training. The final output files are saved in the specified output_dir directory.
+The run_network_pipeline function constructs datasets for graph model training based on single-cell RNA sequencing data. By integrating multiple data sources—including prior knowledge such as gene regulatory interactions, protein-protein interactions, and signaling pathways—the function builds cell type-specific networks.
+
+The pipeline generates two types of edges: positive edges are derived from a candidate set integrating cell type-specific marker genes and housekeeping genes, extracted from prior knowledge networks to represent high-confidence biological associations; negative edges consist of gene pairs with zero co-expression and randomly generated pairs lacking known biological evidence, forming the negative sample set.
+
+For each edge, the function provides comprehensive information, including node indices, edge features, and labels, thereby constructing a standardized dataset suitable for downstream network learning or graph neural network training. All resulting files are saved in the user-specified output directory (output_dir).
 
 ```r
 # Load the run_network_pipeline function
