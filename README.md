@@ -72,7 +72,7 @@ result_all <- run_network_pipeline(
 This model is developed and tested on a Linux GPU server with the following configurations: NVIDIA RTX A6000 GPUs and CUDA 11.7. The system uses NVIDIA driver version 550.107.02 (compatible with CUDA 12.4).
 To facilitate environment setup and reproducibility, a complete environment.yml file is provided. Users can directly create the Python environment using this file, ensuring that all required dependencies are installed consistently for model execution and analysis.
 
-## 🔹 创建python 环境
+## 🔹 create python environment
 ```
 conda env create -f environment.yml
 conda activate scDNS_python
