@@ -41,7 +41,8 @@ build_network_by_group_generalized <- function(
   
   #----------------------------------------
   message(">>> Step 1.2: Prepare network column mapping")
-  suffix <- toupper(group_value) # Automatically identify WT / KO
+  # suffix <- toupper(group_value) # Automatically identify WT / KO
+  suffix <- group_value
   mi_col <- paste0("MI_", suffix)
   d1_col <- paste0("DREMI_1_", suffix)
   d2_col <- paste0("DREMI_2_", suffix)
