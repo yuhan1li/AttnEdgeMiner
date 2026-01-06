@@ -57,7 +57,7 @@ result_all <- run_network_pipeline(
   group_col            = "WT_DSPKD",
   group_values         = c("WT", "KO"),
   network_obj          = iAT2_scDNSob@Network,
-  random_network_obj   = iAT2_scDNSob@NEAModel[["DegreeData"]][["Network"]],
+  random_network_obj   = iAT2_scDNSob@NEAModel[["randNet"]][["DegreeData"]],
   housekeeping_gmt     = "./data/HSIAO_HOUSEKEEPING_GENES.v2025.1.Hs.gmt",
   output_dir           = "./output_data",
   run_clustering       = TRUE,
