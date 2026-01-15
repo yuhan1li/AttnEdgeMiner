@@ -73,18 +73,19 @@ class Encoder(nn.Module):
 # =====================================================
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Extract GATv2 attention scores from multiple runs and aggregate them."
+        description="Extract GATv2 attention scores from multiple runs and perform "
+                    "celltype-aware rank aggregation."
     )
 
-    parser.add_argument("--node-emb", required=True, help="Node embedding file")
+    parser.add_argument("--node-emb", required=True, help="Node embedding file (tsv)")
     parser.add_argument("--edge-pairs", required=True, help="Edge index pairs file")
     parser.add_argument("--edge-feats", required=True, help="Edge feature file")
-    parser.add_argument("--symbol-pairs", required=True, help="Symbol/celltype metadata file")
+    parser.add_argument("--symbol-pairs", required=True, help="Metadata file (must contain 'edge' column)")
 
     parser.add_argument(
         "--weight-dir",
         required=True,
-        help="Directory containing run_XX subfolders (e.g. ./experiments/multi_run)",
+        help="Directory containing run_XX subfolders",
     )
 
     parser.add_argument("--n-runs", type=int, default=10, help="Number of runs")
@@ -95,13 +96,19 @@ def parse_args():
     parser.add_argument(
         "--group-key",
         default="celltype_stim",
-        help="Grouping column in metadata",
+        help="Grouping column name in metadata",
     )
 
     parser.add_argument(
         "--output",
-        default="all_attention_combined_with_rank.csv",
-        help="Output CSV file",
+        default="all_attention_long_format.csv",
+        help="Long-format output CSV",
+    )
+
+    parser.add_argument(
+        "--output-wide",
+        default="all_attention_final_rank_wide.csv",
+        help="Wide-format final ranking CSV",
     )
 
     return parser.parse_args()
@@ -114,7 +121,7 @@ def main():
     args = parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"[INFO] Device: {device}")
+    print(f"[INFO] Using device: {device}")
 
     # -----------------------------
     # Load graph data
@@ -186,6 +193,10 @@ def main():
     # Merge metadata
     # -----------------------------
     meta_df = pd.read_csv(args.symbol_pairs, sep="\t", header=0)
+
+    if "edge" not in meta_df.columns:
+        raise ValueError("Metadata file must contain an 'edge' column.")
+
     df = pd.concat([meta_df, attn_scores_df], axis=1)
 
     score_cols = attn_scores_df.columns.tolist()
@@ -193,7 +204,7 @@ def main():
     group_key = args.group_key
 
     # -----------------------------
-    # Ranking
+    # In-group ranking
     # -----------------------------
     df["mean_score"] = df[score_cols].mean(axis=1, skipna=True)
     df["rank_mean_in_grp"] = (
@@ -203,7 +214,8 @@ def main():
 
     rank_df = df.groupby(group_key)[score_cols].rank(
         method="min", ascending=False
-    )
+    ).clip(lower=1)
+
     df["rank_product"] = np.exp(
         np.log(rank_df).sum(axis=1) / n_runs
     )
@@ -222,13 +234,44 @@ def main():
     )
 
     # -----------------------------
-    # Save
+    # Save long-format output
     # -----------------------------
-    output_path = Path(args.output)
+    output_path = Path(args.output).expanduser().resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_path, index=False)
+    print(f"[INFO] Long-format table written to {output_path}")
 
-    print(f"[INFO] Saved result to: {output_path}")
+    # -----------------------------
+    # Cross-celltype consistency
+    # -----------------------------
+    print("[INFO] Computing per-edge cross-celltype rank consistency...")
+
+    df_wide = df.pivot_table(
+        index="edge",
+        columns=group_key,
+        values="rank_rp_in_grp",
+        aggfunc="min",
+    )
+
+    df_wide["best_rank_across_celltypes"] = df_wide.min(axis=1, skipna=True)
+    df_wide["final_rank"] = df_wide["best_rank_across_celltypes"].rank(
+        method="min", ascending=True
+    )
+
+    threshold = df_wide["final_rank"].quantile(0.8)
+    df_wide["confidence"] = np.where(
+        df_wide["final_rank"] <= threshold,
+        "High_confidence",
+        "Low_confidence",
+    )
+
+    df_wide = df_wide.reset_index()
+
+    output_wide_path = Path(args.output_wide).expanduser().resolve()
+    output_wide_path.parent.mkdir(parents=True, exist_ok=True)
+    df_wide.to_csv(output_wide_path, index=False)
+
+    print(f"[INFO] Wide-format confidence table written to {output_wide_path}")
 
 
 if __name__ == "__main__":
