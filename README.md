@@ -113,11 +113,15 @@ The combine_attention_scores.py script aggregates attention scores from multiple
 
 ```
 python combine_attention_scores.py \
-  --epoch 1000 \
-  --root-dir ./experiments/multi_run \
-  --celltype-file ./symbol_pair.txt \
-  --output ./edge_scores_detailed.csv \
-  --output-wide ./edge_scores_confidence.csv
+  --node-emb ./gene_embedding.txt \
+  --edge-pairs ./index_pairs_true.txt \
+  --edge-feats ./edge_feature_true.txt \
+  --symbol-pairs ./symbol_pair.txt \
+  --weight-dir ./experiments/multi_run \
+  --n-runs 10 \
+  --group-key celltype_stim \
+  --output ./results/all_attention_long.csv \
+  --output-wide ./results/all_attention_rank_wide.csv
 ```
 
 ### Final Attention Score Files
