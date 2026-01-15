@@ -83,7 +83,7 @@ python run_node2vec.py \
   --p 0.5 \
   --q 1.0 \
   --lr 0.01 \
-  --epochs 200
+  --epochs 200 
 ```
 Use the python run_node2vec.py --help argument to see all available input parameters and their descriptions.
 
