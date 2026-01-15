@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Train a two‑layer GATv2 encoder + DGI model for link‑prediction‑style
-attention mining **multiple times** and aggregate the results.
+"""Train a two-layer GATv2 encoder + DGI model for link-prediction style
+attention mining multiple times and aggregate the results.
 
 Example (10 runs):
     python train_gatv_2_dgi_multi.py \
@@ -20,14 +20,14 @@ Example (10 runs):
 Outputs
 -------
 <outdir>/
-    run_01/  …     # artifacts from each individual run
-    run_02/  …
-    run_03/  …
+    run_01/        # artifacts from each individual run
+    run_02/        # run_03/ 
     all_runs_history.csv         # concatenated history of all runs
-    mean_history.csv             # epoch‑wise mean curves
+    mean_history.csv             # epoch-wise mean curves
     mean_curves.png              # mean loss / metric curves
-    final_metrics_summary.csv    # table of final‑epoch metrics for every run
+    final_metrics_summary.csv    # table of final epoch metrics for every run
 """
+
 from __future__ import annotations
 import argparse
 from pathlib import Path
@@ -50,7 +50,7 @@ from torch_geometric.nn import DeepGraphInfomax
 warnings.filterwarnings("ignore", category=UserWarning, message=r"nn\.functional\.tanh is deprecated")
 
 # -----------------------------------------------------------------------------
-# 1) Import user‑provided GATv2Conv implementation
+# 1) Import user-provided GATv2Conv implementation
 # -----------------------------------------------------------------------------
 try:
     from GATv2Conv_CellNEST import GATv2Conv  # pyright: ignore
@@ -60,7 +60,6 @@ except ImportError as err:
 # -----------------------------------------------------------------------------
 # 2) Loss function: binary focal loss on logits
 # -----------------------------------------------------------------------------
-
 def focal_loss_with_logits(
     logits: torch.Tensor,
     targets: torch.Tensor,
@@ -83,32 +82,21 @@ def focal_loss_with_logits(
 # -----------------------------------------------------------------------------
 # 3) Encoder + DGI wrapper
 # -----------------------------------------------------------------------------
-
 class Encoder(nn.Module):
     """Two-layer GATv2 encoder that stores raw attention logits."""
-
     def __init__(self, in_channels: int, hidden_channels: int, edge_dim: int, heads: int = 1):
         super().__init__()
-        self.edge_dim = edge_dim  # Automatically detected and passed in
-
+        self.edge_dim = edge_dim
         self.gat1 = GATv2Conv(
-            in_channels,
-            hidden_channels,
-            edge_dim=edge_dim,
-            heads=heads,
-            concat=False,
-            add_self_loops=False,
+            in_channels, hidden_channels, edge_dim=edge_dim, heads=heads,
+            concat=False, add_self_loops=False
         )
         self.bn1 = nn.BatchNorm1d(hidden_channels)
         self.dropout1 = nn.Dropout(0.3)
 
         self.gat2 = GATv2Conv(
-            hidden_channels,
-            hidden_channels,
-            edge_dim=edge_dim,
-            heads=heads,
-            concat=False,
-            add_self_loops=False,
+            hidden_channels, hidden_channels, edge_dim=edge_dim, heads=heads,
+            concat=False, add_self_loops=False
         )
         self.bn2 = nn.BatchNorm1d(hidden_channels)
         self.dropout2 = nn.Dropout(0.3)
@@ -117,28 +105,17 @@ class Encoder(nn.Module):
         self.attn1_raw: torch.Tensor | None = None  # Store raw attention logits
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_attr: torch.Tensor | None = None):
-        x, _, attn_raw = self.gat1(
-            x,
-            edge_index,
-            edge_attr=edge_attr,
-            return_attention_weights=True,
-        )
+        x, _, attn_raw = self.gat1(x, edge_index, edge_attr=edge_attr, return_attention_weights=True)
         self.attn1_raw = attn_raw
         x = self.dropout1(self.bn1(x))
 
-        x, _, _ = self.gat2(
-            x,
-            edge_index,
-            edge_attr=edge_attr,
-            return_attention_weights=True,
-        )
+        x, _, _ = self.gat2(x, edge_index, edge_attr=edge_attr, return_attention_weights=True)
         x = self.dropout2(self.bn2(x))
         return self.prelu(x)
 
 
 class DGIWrapper(nn.Module):
     """Encoder + Deep Graph Infomax."""
-
     def __init__(self, in_channels: int, hidden_channels: int, edge_dim: int, heads: int, dropout: float):
         super().__init__()
         self.encoder = Encoder(in_channels, hidden_channels, edge_dim, heads)
@@ -158,7 +135,6 @@ class DGIWrapper(nn.Module):
 # -----------------------------------------------------------------------------
 # 4) Utilities
 # -----------------------------------------------------------------------------
-
 def sample_edge_indices(pos_edges: torch.Tensor, neg_edges: torch.Tensor, *, num: int, device: torch.device):
     """Return indices of *num* positive & negative edges and their labels."""
     num = min(num, pos_edges.size(0), neg_edges.size(0))
@@ -169,9 +145,8 @@ def sample_edge_indices(pos_edges: torch.Tensor, neg_edges: torch.Tensor, *, num
     return combined, labels
 
 # -----------------------------------------------------------------------------
-# 5) Single‑run training function (was `train`)
+# 5) Single-run training function
 # -----------------------------------------------------------------------------
-
 def train_single_run(
     *,
     edge_pairs_true_path: Path,
@@ -193,7 +168,7 @@ def train_single_run(
 
     outdir.mkdir(parents=True, exist_ok=True)
 
-    # ---------------- 1) Data ----------------
+    # ---------------- 1) Load data ----------------
     edge_pairs_true = torch.tensor(pd.read_csv(edge_pairs_true_path, sep="\t", header=None).values, dtype=torch.long)
     edge_feats_true = torch.tensor(pd.read_csv(edge_feats_true_path, sep="\t", header=None).values, dtype=torch.float)
     edge_pairs = torch.tensor(pd.read_csv(edge_pairs_path, sep="\t", header=None).values, dtype=torch.long)
@@ -205,8 +180,8 @@ def train_single_run(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     data_real = Data(x=node_emb, edge_index=edge_pairs_true.t(), edge_attr=edge_feats_true).to(device)
-    data_with_fake = Data(x=node_emb, edge_index = edge_pairs.t(), edge_attr = edge_feats).to(device)
-    
+    data_with_fake = Data(x=node_emb, edge_index=edge_pairs.t(), edge_attr=edge_feats).to(device)
+
     # ---------------- 2) Model ----------------
     model = DGIWrapper(node_emb.size(1), hidden_dim, edge_dim, heads, dropout=0.2).to(device)
     enc = model.encoder
@@ -226,7 +201,7 @@ def train_single_run(
     for epoch in range(1, epochs + 1):
         enc.train(); model.train()
 
-        # Forward --------------------------
+        # Forward
         _ = enc(data_with_fake.x, data_with_fake.edge_index, data_with_fake.edge_attr)
         logits_raw = enc.attn1_raw.mean(-1)  # [E]
 
@@ -238,10 +213,10 @@ def train_single_run(
         loss_dgi = model.dgi.loss(pos_z, neg_z, summary)
         total_loss = loss1 + dgi_scale * loss_dgi
 
-        # Backprop ------------------------
+        # Backprop
         optim.zero_grad(); total_loss.backward(); optim.step()
 
-        # Metrics --------------------------
+        # Metrics
         probs = torch.sigmoid(logits_sel).detach().cpu().numpy()
         preds = (probs >= 0.5).astype(float)
         labels_np = labels.cpu().numpy()
@@ -250,7 +225,7 @@ def train_single_run(
         rec = recall_score(labels_np, preds)
         f1 = f1_score(labels_np, preds)
 
-        # Log ------------------------------
+        # Log
         hist["loss1"].append(loss1.item())
         hist["loss_dgi"].append(dgi_scale * loss_dgi.item())
         hist["loss_total"].append(total_loss.item())
@@ -260,48 +235,44 @@ def train_single_run(
         hist["f1"].append(f1)
 
         if epoch % 20 == 0 or epoch == 1:
-            print(
-                f"Ep {epoch:04d} | total {total_loss:.4f} | link {loss1:.4f} | dgi {loss_dgi:.4f} "
-                f"| Acc {acc:.4f} | Prec {prec:.4f} | Rec {rec:.4f} | F1 {f1:.4f}")
+            print(f"Epoch {epoch} | Total Loss: {total_loss:.4f} | Link Loss: {loss1:.4f} | DGI Loss: {loss_dgi:.4f} | Acc: {acc:.4f} | Prec: {prec:.4f} | Rec: {rec:.4f} | F1: {f1:.4f}")
 
-    # ---------------- 4) Save per‑run artifacts ----------------
+    # ---------------- 4) Save per-run artifacts ----------------
     df_hist = pd.DataFrame({"epoch": range(1, epochs + 1), **hist})
     df_hist.to_csv(outdir / "training_history.csv", index=False)
-    print(f"[Saved] history -> {outdir/'training_history.csv'}")
+    print(f"[Saved] History -> {outdir/'training_history.csv'}")
 
-    # Curves ----------------------------------------------------
+    # Curves
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4))
     ax1.plot(df_hist.epoch, df_hist.loss1, label="loss1")
     ax1.plot(df_hist.epoch, df_hist.loss_dgi, label="loss_dgi")
     ax1.plot(df_hist.epoch, df_hist.loss_total, label="total", linewidth=2)
     ax1.set_xlabel("Epoch"); ax1.set_ylabel("Loss"); ax1.set_title("Loss Curves"); ax1.legend()
 
-    ax2.plot(df_hist.epoch, df_hist.accuracy, label="Acc")
-    ax2.plot(df_hist.epoch, df_hist.precision, label="Prec")
-    ax2.plot(df_hist.epoch, df_hist.recall, label="Rec")
-    ax2.plot(df_hist.epoch, df_hist.f1, label="F1", linewidth=2)
+    ax2.plot(df_hist.epoch, df_hist.accuracy, label="Accuracy")
+    ax2.plot(df_hist.epoch, df_hist.precision, label="Precision")
+    ax2.plot(df_hist.epoch, df_hist.recall, label="Recall")
+    ax2.plot(df_hist.epoch, df_hist.f1, label="F1 Score", linewidth=2)
     ax2.set_xlabel("Epoch"); ax2.set_ylabel("Score"); ax2.set_title("Metrics Curves"); ax2.legend()
 
     plt.tight_layout(); plt.savefig(outdir / "loss_metrics.png", dpi=300); plt.close()
 
-    # Attention scores -----------------------------------------
+    # Attention scores
     raw_attn = enc.attn1_raw.detach().cpu().squeeze(-1).numpy()
     attn = torch.sigmoid(enc.attn1_raw).detach().cpu().squeeze(-1).numpy()
-    # Save attention scores without sigmoid
     pd.DataFrame({"attention": raw_attn}).to_csv(outdir / f"attention_layer1_epoch{epochs}_raw.csv", index=False)
     pd.DataFrame({"attention": attn}).to_csv(outdir / f"attention_layer1_epoch{epochs}.csv", index=False)
-    
+
     torch.save(enc.state_dict(), outdir / f"encoder_epoch{epochs}.pt")
-    print(f"[Saved] model -> {outdir / f'encoder_epoch{epochs}.pt'}")
+    print(f"[Saved] Model -> {outdir/f'encoder_epoch{epochs}.pt'}")
 
     return df_hist
 
 # -----------------------------------------------------------------------------
 # 6) Aggregation helpers
 # -----------------------------------------------------------------------------
-
 def aggregate_runs(base_outdir: Path, runs: int, epochs: int):
-    """Read perrun histories, concatenate, and save mean curves & summary."""
+    """Aggregate multiple runs and save mean curves and final metrics."""
     dfs = []
     for i in range(1, runs + 1):
         csv = base_outdir / f"run_{i:02d}" / "training_history.csv"
@@ -317,7 +288,7 @@ def aggregate_runs(base_outdir: Path, runs: int, epochs: int):
     all_hist = pd.concat(dfs, ignore_index=True)
     all_hist.to_csv(base_outdir / "all_runs_history.csv", index=False)
 
-    # Epoch‑wise mean curves
+    # Epoch-wise mean curves
     mean_hist = all_hist.groupby("epoch").mean(numeric_only=True).reset_index()
     mean_hist.to_csv(base_outdir / "mean_history.csv", index=False)
 
@@ -328,23 +299,20 @@ def aggregate_runs(base_outdir: Path, runs: int, epochs: int):
     ax1.plot(mean_hist.epoch, mean_hist.loss_total, label="total", linewidth=2)
     ax1.set_title("Mean Loss Curves"); ax1.set_xlabel("Epoch"); ax1.set_ylabel("Loss"); ax1.legend()
 
-    ax2.plot(mean_hist.epoch, mean_hist.accuracy, label="Acc")
-    ax2.plot(mean_hist.epoch, mean_hist.precision, label="Prec")
-    ax2.plot(mean_hist.epoch, mean_hist.recall, label="Rec")
-    ax2.plot(mean_hist.epoch, mean_hist.f1, label="F1", linewidth=2)
+    ax2.plot(mean_hist.epoch, mean_hist.accuracy, label="Accuracy")
+    ax2.plot(mean_hist.epoch, mean_hist.precision, label="Precision")
+    ax2.plot(mean_hist.epoch, mean_hist.recall, label="Recall")
+    ax2.plot(mean_hist.epoch, mean_hist.f1, label="F1 Score", linewidth=2)
     ax2.set_title("Mean Metrics"); ax2.set_xlabel("Epoch"); ax2.set_ylabel("Score"); ax2.legend()
 
     plt.tight_layout(); plt.savefig(base_outdir / "mean_curves.png", dpi=300); plt.close()
 
-    # Final‑epoch summary table --------------------------------
+    # Final epoch summary
     final_rows = all_hist[all_hist.epoch == epochs]
     final_rows.to_csv(base_outdir / "final_metrics_summary.csv", index=False)
     print(f"[Saved] Aggregated artifacts in {base_outdir}")
 
-# -----------------------------------------------------------------------------
-# 7) CLI
-# -----------------------------------------------------------------------------
-
+# CLI
 def parse_args():
     p = argparse.ArgumentParser(
         description=(
@@ -400,19 +368,25 @@ def parse_args():
                    help="Number of independent runs to aggregate.")
     return p.parse_args()
 
+
 # -----------------------------------------------------------------------------
 # 8) Entry point
 # -----------------------------------------------------------------------------
-
 def main():
-    start_time = time.time()   # Record start time
-    
+    start_time = time.time()
+
     args = parse_args()
     args.outdir.mkdir(parents=True, exist_ok=True)
+
+    max_peak_mem_all_runs = 0.0
 
     for run_idx in range(1, args.runs + 1):
         print(f"\n===== Run {run_idx}/{args.runs} =====")
         run_outdir = args.outdir / f"run_{run_idx:02d}"
+
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
+
         train_single_run(
             edge_pairs_true_path=args.edge_pairs_true,
             edge_feats_true_path=args.edge_feats_true,
@@ -430,13 +404,26 @@ def main():
             dgi_scale=args.dgi_scale,
         )
 
+        if torch.cuda.is_available():
+            peak_mem = torch.cuda.max_memory_allocated() / (1024 ** 2)
+            print(f"Run {run_idx} peak GPU memory usage: {peak_mem:.1f} MB\n")
+
+            if peak_mem > max_peak_mem_all_runs:
+                max_peak_mem_all_runs = peak_mem
+
     if args.runs > 1:
         aggregate_runs(args.outdir, args.runs, args.epochs)
-        
-    # Print elapsed time when program ends
+
     end_time = time.time()
     elapsed = end_time - start_time
-    print(f"\n✅ Total training time: {elapsed/60:.2f} minutes ({elapsed:.1f} seconds)")
+    print(f"\nTotal training time: {elapsed / 60:.2f} minutes ({elapsed:.1f} seconds)")
+
+    if torch.cuda.is_available():
+        print(
+            f"Maximum GPU memory used across all runs: "
+            f"{max_peak_mem_all_runs:.1f} MB"
+        )
+
 
 if __name__ == "__main__":
     main()
