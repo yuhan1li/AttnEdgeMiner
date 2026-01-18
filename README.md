@@ -48,7 +48,7 @@ result_all <- run_network_pipeline(
   run_clustering       = TRUE,
   dims                 = 1:20,
   resolution           = 0.5,
-  top_n_marker         = 300,
+  top_n_marker         = 100,
   negative_sample_size = 50000
 )
 ```
