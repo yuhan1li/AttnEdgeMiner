@@ -55,9 +55,9 @@ result_all <- run_network_pipeline(
 
 | Parameter       | Recommended range | Notes |
 |-----------------|------------------|-------|
-| `resolution`    | 0.4 – 0.8        | 0.5 is a good default for most scRNA-seq datasets |
-| `top_n_marker`  | 100 – 300        | 100 for conservative networks; 200–300 for broader coverage |
-| `dims`          | 1:20 – 1:30      | Increase if strong batch effects or complex populations |
+| `resolution`    | 0.3 – 0.9        | 0.5 is a good default for most scRNA-seq datasets |
+| `top_n_marker`  | 50 – 200        | 50–100 for conservative networks; 150–200 for broader coverage  |
+| `dims`          | 1:20 – 1:40      | Typically 20–30 to capture major biological variation and obtain stable functional cell states |
 | `group_values`  | ≥ 2 groups       | Supports WT/KO or multi-condition comparisons |
 
 ## 🔹 System requirements：
@@ -95,6 +95,15 @@ python run_node2vec.py \
 ```
 Use the python run_node2vec.py --help argument to see all available input parameters and their descriptions.
 
+| Parameter | Recommended range | Notes |
+|---------|------------------|------|
+| `p` | 0.25 – 1.0 | Lower values encourage returning to nearby nodes (local exploration); useful for preserving functional modules |
+| `q` | 0.5 – 2.0 | Controls breadth vs depth of exploration; values around 1 balance local and global structure |
+| `lr` | 0.001 – 0.02 | Learning rate for embedding optimization; 0.01 works well in most cases |
+| `embedding_dim` | 128 – 512 | Higher dimensions capture richer topology at the cost of computation |
+| `walk_length` | 10 – 30 | Longer walks capture higher-order relationships |
+| `walks_per_node` | 5 – 20 | More walks improve stability but increase runtime |
+
 ### 3️⃣ Training Graph Attention + DGI (Python)
 
 The train_gatv_2_dgi_multi.py script implements a sophisticated graph learning approach that combines GATv2 graph attention networks with Deep Graph Infomax (DGI). This integrated framework takes node embeddings and edge features generated in previous steps to perform edge classification, predicting potential regulatory relationships between gene pairs. The graph attention mechanism dynamically aggregates information from each node and its neighbors, while the self-supervised DGI module ensures the learned embeddings effectively capture the overall network structure. Supervised edge classification is optimized using positive and negative edge labels, with Focal Loss employed to handle class imbalance. The training outputs, including attention scores for each edge and refined node embeddings, are systematically saved in ./experiments/multi_run/ for subsequent network analysis and visualization.
@@ -111,8 +120,7 @@ python train_gatv_2_dgi_multi.py \
   --neg-edges ./Negative_edge.txt \
   --outdir ./experiments/multi_run \
   --epochs 1000 \
-  --runs 10 \
-  --dgi-scale 0.1
+  --runs 10 
 ```
 Use the python train_gatv_2_dgi_multi.py --help argument to see all available input parameters and their descriptions.
 ### 4️⃣ Extract and Merge Attention Scores (Python)
