@@ -48,10 +48,18 @@ result_all <- run_network_pipeline(
   run_clustering       = TRUE,
   dims                 = 1:20,
   resolution           = 0.5,
-  top_n_marker         = 100,
-  negative_sample_size = 50000
+  top_n_marker         = 100
 )
 ```
+### Recommended parameter settings
+
+| Parameter       | Recommended range | Notes |
+|-----------------|------------------|-------|
+| `resolution`    | 0.4 – 0.8        | 0.5 is a good default for most scRNA-seq datasets |
+| `top_n_marker`  | 100 – 300        | 100 for conservative networks; 200–300 for broader coverage |
+| `dims`          | 1:20 – 1:30      | Increase if strong batch effects or complex populations |
+| `group_values`  | ≥ 2 groups       | Supports WT/KO or multi-condition comparisons |
+
 ## 🔹 System requirements：
 
 This model is developed and tested on a Linux GPU server with the following configurations: NVIDIA RTX A6000 GPUs and CUDA 11.7. The system uses NVIDIA driver version 550.107.02 (compatible with CUDA 12.4).
