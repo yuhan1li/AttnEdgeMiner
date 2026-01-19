@@ -58,7 +58,6 @@ result_all <- run_network_pipeline(
 | `resolution`    | 0.3 – 0.9        | 0.5 is a good default for most scRNA-seq datasets |
 | `top_n_marker`  | 50 – 200        | 50–100 for conservative networks; 150–200 for broader coverage  |
 | `dims`          | 1:20 – 1:40      | Typically 20–30 to capture major biological variation and obtain stable functional cell states |
-| `group_values`  | ≥ 2 groups       | Supports WT/KO or multi-condition comparisons |
 
 ## 🔹 System requirements：
 
@@ -95,15 +94,16 @@ python run_node2vec.py \
 ```
 Use the python run_node2vec.py --help argument to see all available input parameters and their descriptions.
 
-### Recommended parameter settings
-| Parameter | Recommended range | Notes |
-|---------|------------------|------|
-| `p` | 0.25 – 1.0 | Lower values encourage returning to nearby nodes (local exploration); useful for preserving functional modules |
-| `q` | 0.5 – 2.0 | Controls breadth vs depth of exploration; values around 1 balance local and global structure |
-| `lr` | 0.001 – 0.02 | Learning rate for embedding optimization; 0.01 works well in most cases |
-| `embedding_dim` | 128 – 512 | Higher dimensions capture richer topology at the cost of computation |
-| `walk_length` | 10 – 30 | Longer walks capture higher-order relationships |
-| `walks_per_node` | 5 – 20 | More walks improve stability but increase runtime |
+## Node2Vec Parameter Description
+
+| Parameter | Recommended range | Description |
+|----------|------------------|-------------|
+| `p` | 0.25 – 1.0 | Return parameter controlling locality of random walks. Lower values emphasize local neighborhoods and help preserve functional gene modules. |
+| `q` | 0.5 – 2.0 | In–out parameter balancing local (BFS-like) and global (DFS-like) exploration. Values around 1 provide balanced network representations. |
+| `lr` | 0.001 – 0.02 | Learning rate for embedding optimization. `0.01` ensures stable and efficient convergence in most cases. |
+| `embedding_dim` | 128 – 512 | Dimensionality of node embeddings. Higher values capture richer network topology at increased computational cost. |
+| `walk_length` | 10 – 30 | Length of each random walk for capturing higher-order relationships. |
+| `walks_per_node` | 5 – 20 | Number of random walks per node. More walks improve stability but increase runtime. |
 
 ### 3️⃣ Training Graph Attention + DGI (Python)
 
