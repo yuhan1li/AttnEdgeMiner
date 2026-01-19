@@ -23,6 +23,7 @@ build_network_by_group_generalized <- function(
   #----------------------------------------
   message(">>> Step 1.1: Subset Seurat object and preprocess")
   seurat_sub <- subset(seurat_obj, cells = rownames(seurat_obj@meta.data[seurat_obj@meta.data[[group_col]] %in% group_value, ]))
+  seurat_sub <- rmNotExpressedGene(seurat_sub,min.cellN = 2)
   
   if (run_clustering) {
     seurat_sub <- NormalizeData(seurat_sub)
@@ -33,6 +34,10 @@ build_network_by_group_generalized <- function(
     seurat_sub <- FindClusters(seurat_sub, resolution = resolution)
     seurat_sub <- RunUMAP(seurat_sub, dims = dims)
     seurat_sub$clusters <- seurat_sub$seurat_clusters
+    
+    seurat_sub <- merge_small_clusters(seurat_sub, min_frac = 0.05)
+    Idents(seurat_sub) <- seurat_sub$clusters
+    seurat_sub$seurat_clusters <- seurat_sub$clusters
   } else if (!is.null(cluster_col)) {
     seurat_sub$clusters <- seurat_sub@meta.data[[cluster_col]]
   } else {
@@ -110,10 +115,30 @@ build_network_by_group_generalized <- function(
   save(Network_x, file = file.path(save_prefix, paste0("Network_", group_value, ".Rdata")))
   #----------------------------------------
   message(">>> Step 1.6: Identify COSG markers")
-  Idents(seurat_sub) <- seurat_sub$clusters
-  COSG_markers <- cosg(seurat_sub, groups = 'all', assay = 'RNA', slot = 'data', mu = 1, n_genes_user = top_n_marker)
-  celltype_marker <- COSG_markers[["names"]]
+  # Idents(seurat_sub) <- seurat_sub$clusters
+  # COSG_markers <- cosg(seurat_sub, groups = 'all', assay = 'RNA', slot = 'data', mu = 1, n_genes_user = top_n_marker)
+  # celltype_marker <- COSG_markers[["names"]]
   
+  COSG_markers <- cosg(seurat_sub, groups = 'all', assay = 'RNA', slot = 'data', mu = 1, expressed_pct=0.1, n_genes_user = top_n_marker )
+  cosg_thresh <- 0.2
+  head(celltype_marker)
+  celltype_marker <- lapply(colnames(COSG_markers$scores), function(cl) {
+    scores <- COSG_markers$scores[, cl]
+    genes  <- COSG_markers$names[, cl]
+    genes[scores >= cosg_thresh]
+  })
+  max_len <- max(sapply(celltype_marker, length))
+  celltype_marker <- as.data.frame(
+    lapply(celltype_marker, function(x) {
+      length(x) <- max_len
+      x
+    }),
+    stringsAsFactors = FALSE
+  )
+  colnames(celltype_marker) <- colnames(COSG_markers$scores)
+  head(celltype_marker)
+  
+  setdiff(colnames(celltype_marker), levels(seurat_sub$clusters))
   #----------------------------------------
   message(">>> Step 1.7: Integrate housekeeping genes")
   gene_sets <- getGmt(housekeeping_gmt)
@@ -166,6 +191,8 @@ build_network_by_group_generalized <- function(
     net_tmp <- Network_x
     expr1 <- gene2expr[net_tmp$Symbol.1]
     expr2 <- gene2expr[net_tmp$Symbol.2]
+    expr1[is.na(expr1)] <- 0
+    expr2[is.na(expr2)] <- 0
     net_tmp$geom_mean_expr <- sqrt(expr1 * expr2)
     net_tmp$celltype <- ct
     network_list[[gsub("[ +]", "_", ct)]] <- net_tmp
@@ -364,6 +391,7 @@ run_network_pipeline <- function(
     Positive_Network_all1 <- network_all_celltype %>%
       filter(cell_index %in% Positive_Network_all$cell_index)
     
+    n_pos <- nrow(Positive_Network_all1)
     write.table(
       Positive_Network_all1[, c("index1", "index2", "index")],
       file = file.path(export_dir, "Positive_edge.txt"),
@@ -376,6 +404,11 @@ run_network_pipeline <- function(
     
     Negative_network_all_celltype1 <- network_all_celltype_true[
       network_all_celltype_true$geom_mean_expr == 0, ]
+    write.table(
+      Negative_network_all_celltype1,
+      file = file.path(export_dir, "Negative_network_all_celltype1.txt"),
+      sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE
+    )
     Negative_network_all_celltype2 <- network_all_celltype_random
     
     Negative_network_all_celltype <- rbind(
@@ -384,9 +417,9 @@ run_network_pipeline <- function(
     )
     
     # Random sampling of negative samples
-    set.seed(123)
-    Negative_network_all_celltype <- Negative_network_all_celltype %>%
-      sample_n(min(negative_sample_size, nrow(network_all_celltype_random)))
+    # set.seed(123)
+    # Negative_network_all_celltype <- Negative_network_all_celltype %>%
+    #   sample_n(min(negative_sample_size, nrow(network_all_celltype_random)))
     
     # Save negative samples
     write.table(
@@ -416,4 +449,63 @@ run_network_pipeline <- function(
   })
   
   message("========== PIPELINE FINISHED ==========")
+}
+
+
+
+merge_small_clusters <- function(seurat_obj, min_frac = 0.05, dims = 1:20) {
+  
+  # 默认：clusters = seurat_clusters
+  seurat_obj$clusters <- seurat_obj$seurat_clusters
+  
+  # 计算阈值
+  min_cells <- ceiling(ncol(seurat_obj) * min_frac)
+  tab <- table(seurat_obj$seurat_clusters)
+  
+  # 找小 cluster
+  small <- names(tab[tab < min_cells])
+  
+  # 如果不存在小 cluster，直接返回
+  if (length(small) == 0) {
+    message("No clusters smaller than ", min_frac * 100, "%, skip merging.")
+    return(seurat_obj)
+  }
+  
+  message("Merging small clusters: ", paste(small, collapse = ", "))
+  
+  large <- names(tab[tab >= min_cells])
+  
+  # PCA embedding
+  pca <- Embeddings(seurat_obj, "pca")[, dims]
+  
+  # cluster 中心
+  centers <- aggregate(
+    pca,
+    by = list(cluster = seurat_obj$seurat_clusters),
+    FUN = mean
+  )
+  row.names(centers) <- centers$cluster
+  centers$cluster <- NULL
+  
+  new_clust <- seurat_obj$clusters
+  
+  # 合并
+  for (cl in small) {
+    
+    d <- apply(
+      centers[large, , drop = FALSE],
+      1,
+      function(x)
+        sqrt(sum((x - as.numeric(centers[cl, ]))^2))
+    )
+    
+    nearest <- names(which.min(d))
+    message("  merge ", cl, " -> ", nearest)
+    
+    new_clust[new_clust == cl] <- nearest
+  }
+  
+  # 覆盖 clusters
+  seurat_obj$clusters <- factor(new_clust)
+  return(seurat_obj)
 }
