@@ -95,6 +95,7 @@ python run_node2vec.py \
 ```
 Use the python run_node2vec.py --help argument to see all available input parameters and their descriptions.
 
+### Recommended parameter settings
 | Parameter | Recommended range | Notes |
 |---------|------------------|------|
 | `p` | 0.25 – 1.0 | Lower values encourage returning to nearby nodes (local exploration); useful for preserving functional modules |
