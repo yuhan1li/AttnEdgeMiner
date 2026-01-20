@@ -291,4 +291,4 @@ dependencies:
       - umap-learn==0.5.5
       - urllib3==2.2.1
       - yarl==1.9.4
-prefix: /data2/Home/liyuhan/miniconda3/envs/CellNest
+prefix: /data2/Home/liyuhan/miniconda3/envs/scDNS
