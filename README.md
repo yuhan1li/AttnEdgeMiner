@@ -157,8 +157,8 @@ Example rows:
 
 | edge          | KO_0  | KO_1  | ... | WT_5  | WT_6  | final_rank | confidence      |
 |----------------|-------|-------|-----|-------|-------|-------------|----------------|
-| MT-CYB_MT-ND3  | 44    | 25    | ... | 25    | 34    | 43          | High_confidence |
-| ENKD1_ENKUR    | 208881| 208887| ... | 208890| 208889| 208945      | Low_confidence  |
+| MT-CYB_MT-ND3  | 44    | 25    | ... | 25    | 34    | 25          | High_confidence |
+| ENKD1_ENKUR    | 208881| 208887| ... | 208890| 208889| 208881      | Low_confidence  |
 
 
 
